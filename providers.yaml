@@ -1,0 +1,75 @@
+# Provider 定义：base_url 都是 OpenAI 兼容端点。api_key_env 对应的环境变量没填就自动跳过该 provider。
+# 加新来源不用改代码：这里加一段 + .env 填 key 就自动生效（同理，aliases 里列了但没 key 的会自动被过滤掉）。
+# rpm：网关层对该 provider 的每分钟请求上限；请求排队等待，避免打到上游 429。不写或 null = 不限流。
+providers:
+  groq:
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+    rpm: 30
+  gemini:
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai
+    api_key_env: GEMINI_API_KEY
+    rpm: 15
+  openrouter:
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+    rpm: 10
+  cerebras:
+    base_url: https://api.cerebras.ai/v1
+    api_key_env: CEREBRAS_API_KEY
+    rpm: 30
+  together:
+    base_url: https://api.together.xyz/v1
+    api_key_env: TOGETHER_API_KEY
+    rpm: 20
+  mistral:
+    base_url: https://api.mistral.ai/v1
+    api_key_env: MISTRAL_API_KEY
+    rpm: 20
+  deepseek:
+    base_url: https://api.deepseek.com/v1
+    api_key_env: DEEPSEEK_API_KEY
+    rpm: 30
+  moonshot:
+    base_url: https://api.moonshot.cn/v1
+    api_key_env: MOONSHOT_API_KEY
+    rpm: 20
+  zhipu:
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    api_key_env: ZHIPU_API_KEY
+    rpm: 30
+  qwen:
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key_env: QWEN_API_KEY
+    rpm: 30
+  siliconflow:
+    base_url: https://api.siliconflow.cn/v1
+    api_key_env: SILICONFLOW_API_KEY
+    rpm: 20
+  ollama:
+    base_url: ${OLLAMA_BASE_URL}/v1
+    api_key_env: null   # 本地不需要 key
+    # 本地不限流
+
+# model 别名 → provider 优先级链，router 按顺序尝试。
+# 海外来源在前（通常更快更稳），国内来源次之，本地 ollama 兜底。
+# 注意：具体 model 名可能会变（Groq 之前就下线过一批），报 404/model_not_found 时去对应 provider 官网查当前可用模型名改一下就行。
+aliases:
+  default:
+    - {provider: groq, model: openai/gpt-oss-120b}
+    - {provider: gemini, model: gemini-3.6-flash}
+    - {provider: cerebras, model: gpt-oss-120b}
+    - {provider: together, model: "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free"}
+    - {provider: deepseek, model: deepseek-chat}
+    - {provider: moonshot, model: moonshot-v1-8k}
+    - {provider: zhipu, model: glm-4-flash}
+    - {provider: qwen, model: qwen-turbo}
+    - {provider: siliconflow, model: "Qwen/Qwen2.5-7B-Instruct"}
+    - {provider: mistral, model: mistral-small-latest}
+    - {provider: openrouter, model: "liquid/lfm-2.5-2.6b:free"}
+    - {provider: ollama, model: qwen2.5:7b}
+  smart:
+    - {provider: gemini, model: gemini-pro-latest}   # 免费层配额很小，容易 429
+    - {provider: deepseek, model: deepseek-reasoner}
+    - {provider: openrouter, model: "z-ai/glm-5.2:free"}   # OpenRouter 免费池是全网共享限流，经常 429，这条只是兜底
+    - {provider: groq, model: openai/gpt-oss-120b}   # 都不可用时兜底，不算"更强"，但至少能回答

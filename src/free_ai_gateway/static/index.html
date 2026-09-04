@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>Gateway Console</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --surface: #ffffff;
+    --surface-sunken: #ebe8e1;
+    --border: #ddd8ce;
+    --text: #23241f;
+    --text-muted: #6b6a5f;
+    --accent: #1f8a7a;
+    --accent-soft: #e3f1ec;
+    --accent-text: #0f5c50;
+    --warn: #b5761f;
+    --ok-dot: #2f9e5b;
+    --err-dot: #c94f3d;
+    --user-bubble: #1f8a7a;
+    --user-bubble-text: #f5fdfb;
+    --assistant-bubble: #ffffff;
+    --shadow: 0 1px 2px rgba(35,36,31,0.06), 0 4px 12px rgba(35,36,31,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14171a; --surface: #1c2023; --surface-sunken: #121517; --border: #2c3236;
+      --text: #e9e7df; --text-muted: #8b9096; --accent: #4fc3ae; --accent-soft: #1c3833;
+      --accent-text: #7fd9c6; --warn: #e0a53f; --ok-dot: #4fc37a; --err-dot: #e0685a;
+      --user-bubble: #2a6f62; --user-bubble-text: #f0fbf8; --assistant-bubble: #21262a;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14171a; --surface: #1c2023; --surface-sunken: #121517; --border: #2c3236;
+    --text: #e9e7df; --text-muted: #8b9096; --accent: #4fc3ae; --accent-soft: #1c3833;
+    --accent-text: #7fd9c6; --warn: #e0a53f; --ok-dot: #4fc37a; --err-dot: #e0685a;
+    --user-bubble: #2a6f62; --user-bubble-text: #f0fbf8; --assistant-bubble: #21262a;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.35);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    height: 100vh; overflow: hidden;
+  }
+  .app {
+    display: grid; grid-template-rows: auto 1fr auto; height: 100vh;
+    max-width: 720px; margin: 0 auto;
+    border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .topbar {
+    display: flex; align-items: center; gap: 14px; padding: 14px 20px;
+    border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .brand {
+    display: flex; align-items: baseline; gap: 8px;
+    font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 15px;
+  }
+  .brand .dim { color: var(--text-muted); font-weight: 400; font-size: 13px; }
+  .status {
+    display: flex; align-items: center; gap: 6px;
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--text-muted);
+    margin-left: auto; background: none; border: none; padding: 4px 6px; border-radius: 6px;
+    cursor: pointer;
+  }
+  .status:hover { background: var(--surface-sunken); }
+  .status:disabled { cursor: default; opacity: 0.6; }
+  .status .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--ok-dot);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok-dot) 18%, transparent);
+  }
+  .status.offline .dot {
+    background: var(--err-dot);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--err-dot) 18%, transparent);
+  }
+  .model-picker { position: relative; }
+  .model-picker select {
+    appearance: none; font-family: "IBM Plex Mono", monospace; font-size: 12.5px;
+    font-weight: 500; color: var(--accent-text); background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: 6px; padding: 6px 26px 6px 10px; cursor: pointer;
+  }
+  .model-picker::after {
+    content: "▾"; position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+    color: var(--accent-text); font-size: 10px; pointer-events: none;
+  }
+  .log {
+    overflow-y: auto; padding: 22px 20px 8px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .row { display: flex; flex-direction: column; max-width: 78%; }
+  .row.user { align-self: flex-end; align-items: flex-end; }
+  .row.assistant { align-self: flex-start; align-items: flex-start; }
+  .bubble {
+    padding: 10px 14px; border-radius: 14px; font-size: 14.5px; line-height: 1.5;
+    box-shadow: var(--shadow); white-space: pre-wrap; word-break: break-word;
+  }
+  .row.user .bubble {
+    background: var(--user-bubble); color: var(--user-bubble-text);
+    border-radius: 14px 14px 3px 14px;
+  }
+  .row.assistant .bubble {
+    background: var(--assistant-bubble); color: var(--text); border: 1px solid var(--border);
+    border-radius: 14px 14px 14px 3px;
+  }
+  .row.assistant .bubble.error { border-color: var(--err-dot); color: var(--err-dot); }
+  .via {
+    margin-top: 5px; font-family: "IBM Plex Mono", monospace; font-size: 11px;
+    color: var(--text-muted); display: flex; align-items: center; gap: 5px; padding: 0 3px;
+  }
+  .via .tag { color: var(--accent-text); }
+  .via.fallback .tag { color: var(--warn); }
+  .via::before { content: "↳"; opacity: 0.6; }
+  .system-note {
+    align-self: center; font-family: "IBM Plex Mono", monospace; font-size: 11px;
+    color: var(--text-muted); background: var(--surface-sunken); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px;
+  }
+  .typing { display: flex; gap: 4px; padding: 4px 2px; }
+  .typing span {
+    width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted);
+    opacity: 0.5; animation: blink 1.2s infinite ease-in-out;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 0.85; } }
+  @media (prefers-reduced-motion: reduce) { .typing span { animation: none; opacity: 0.6; } }
+  .inputbar { border-top: 1px solid var(--border); background: var(--surface); padding: 14px 20px 16px; }
+  .inputwrap {
+    display: flex; align-items: flex-end; gap: 10px; background: var(--surface-sunken);
+    border: 1px solid var(--border); border-radius: 12px; padding: 8px 8px 8px 14px;
+  }
+  .inputwrap textarea {
+    flex: 1; border: none; background: transparent; color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 14.5px;
+    resize: none; outline: none; padding: 6px 0; max-height: 120px;
+  }
+  .inputwrap textarea::placeholder { color: var(--text-muted); }
+  .send {
+    display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;
+    border-radius: 9px; border: none; background: var(--accent); color: var(--surface);
+    cursor: pointer; flex-shrink: 0;
+  }
+  .send:disabled { opacity: 0.5; cursor: default; }
+  .send svg { width: 16px; height: 16px; }
+  .hint { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; color: var(--text-muted); margin: 8px 2px 0; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">free-ai-gateway <span class="dim">console</span></div>
+    <div class="model-picker">
+      <select id="alias-select"></select>
+    </div>
+    <button class="status" id="status" title="点击测试所有已配置来源"><span class="dot"></span> <span id="status-text">connecting…</span></button>
+  </header>
+
+  <main class="log" id="log"></main>
+
+  <footer class="inputbar">
+    <div class="inputwrap">
+      <textarea id="input" rows="1" placeholder="发消息…"></textarea>
+      <button class="send" id="send" aria-label="发送">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/></svg>
+      </button>
+    </div>
+    <div class="hint">Enter 发送 · Shift+Enter 换行</div>
+  </footer>
+</div>
+
+<script>
+  const logEl = document.getElementById("log");
+  const inputEl = document.getElementById("input");
+  const sendBtn = document.getElementById("send");
+  const aliasSelect = document.getElementById("alias-select");
+  const statusEl = document.getElementById("status");
+  const statusText = document.getElementById("status-text");
+
+  const messages = [];
+  let gatewayToken = localStorage.getItem("gateway_token") || "";
+
+  function authHeaders() {
+    const headers = { "Content-Type": "application/json" };
+    if (gatewayToken) headers["Authorization"] = "Bearer " + gatewayToken;
+    return headers;
+  }
+
+  function addNote(text) {
+    const el = document.createElement("div");
+    el.className = "system-note";
+    el.textContent = text;
+    logEl.appendChild(el);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function addBubble(role, text, { via, error } = {}) {
+    const row = document.createElement("div");
+    row.className = "row " + role;
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble" + (error ? " error" : "");
+    bubble.textContent = text;
+    row.appendChild(bubble);
+
+    if (via) {
+      const viaEl = document.createElement("div");
+      viaEl.className = "via" + (via.fallback ? " fallback" : "");
+      viaEl.innerHTML = `<span class="tag">via ${via.provider}</span> · ${via.model}` +
+        (via.fallback ? " · 上一个来源失败后自动切换" : "");
+      row.appendChild(viaEl);
+    }
+
+    logEl.appendChild(row);
+    logEl.scrollTop = logEl.scrollHeight;
+    return row;
+  }
+
+  function addTyping() {
+    const row = document.createElement("div");
+    row.className = "row assistant";
+    row.innerHTML = `<div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+    logEl.appendChild(row);
+    logEl.scrollTop = logEl.scrollHeight;
+    return row;
+  }
+
+  async function checkProvidersHealth() {
+    statusEl.disabled = true;
+    addNote("测试所有已配置来源…");
+    try {
+      const resp = await fetch("/v1/providers/health", { headers: authHeaders() });
+      const data = await resp.json();
+      for (const r of data.results) {
+        const label = r.ok
+          ? `✓ ${r.provider} · ${r.model} · ${r.latency_ms}ms`
+          : `✗ ${r.provider}${r.model ? " · " + r.model : ""} · ${r.error}`;
+        addNote(label);
+      }
+    } catch (e) {
+      addNote("健康检查失败：" + e.message);
+    } finally {
+      statusEl.disabled = false;
+    }
+  }
+
+  async function loadModels() {
+    try {
+      const resp = await fetch("/v1/models", { headers: authHeaders() });
+      if (!resp.ok) throw new Error(resp.status);
+      const data = await resp.json();
+      aliasSelect.innerHTML = "";
+
+      const aliasGroup = document.createElement("optgroup");
+      aliasGroup.label = "别名（自动 fallback）";
+      const providerGroup = document.createElement("optgroup");
+      providerGroup.label = "单独测试某个来源";
+
+      for (const m of data.data) {
+        const opt = document.createElement("option");
+        opt.value = m.id;
+        opt.textContent = m.id;
+        (m.kind === "provider" ? providerGroup : aliasGroup).appendChild(opt);
+      }
+      if (aliasGroup.children.length) aliasSelect.appendChild(aliasGroup);
+      if (providerGroup.children.length) aliasSelect.appendChild(providerGroup);
+
+      statusEl.classList.remove("offline");
+      statusText.textContent = window.location.host;
+      addNote(`session started · model: ${aliasSelect.value || "(无可用来源)"}`);
+    } catch (e) {
+      statusEl.classList.add("offline");
+      statusText.textContent = "unreachable";
+    }
+  }
+
+  async function send() {
+    const text = inputEl.value.trim();
+    if (!text) return;
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+
+    messages.push({ role: "user", content: text });
+    addBubble("user", text);
+
+    const typingRow = addTyping();
+    sendBtn.disabled = true;
+
+    try {
+      const resp = await fetch("/v1/chat/completions", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ model: aliasSelect.value, messages }),
+      });
+
+      if (resp.status === 401) {
+        const token = prompt("网关需要 GATEWAY_TOKEN 才能访问，请输入：");
+        if (token) {
+          gatewayToken = token;
+          localStorage.setItem("gateway_token", token);
+        }
+        typingRow.remove();
+        sendBtn.disabled = false;
+        return send();
+      }
+
+      const data = await resp.json();
+      typingRow.remove();
+
+      if (!resp.ok) {
+        addBubble("assistant", data.detail || "请求失败", { error: true });
+        return;
+      }
+
+      const content = data.choices?.[0]?.message?.content ?? "(空响应)";
+      messages.push({ role: "assistant", content });
+      addBubble("assistant", content, { via: data._gateway });
+    } catch (e) {
+      typingRow.remove();
+      addBubble("assistant", "网络错误：" + e.message, { error: true });
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+
+  sendBtn.addEventListener("click", send);
+  statusEl.addEventListener("click", checkProvidersHealth);
+  inputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  });
+  inputEl.addEventListener("input", () => {
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+  });
+
+  loadModels();
+</script>
+</body>
+</html>
