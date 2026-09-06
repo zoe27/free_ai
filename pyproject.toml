@@ -1,8 +1,33 @@
 [project]
 name = "free-ai-gateway"
 version = "0.1.0"
-description = "自建免费 AI API 聚合网关，OpenAI 兼容接口"
+description = "OpenAI-compatible free LLM API gateway with automatic provider fallback"
+readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.11"
+authors = [{ name = "zoe27" }]
+keywords = [
+    "openai",
+    "llm",
+    "gateway",
+    "proxy",
+    "fastapi",
+    "groq",
+    "gemini",
+    "ollama",
+    "openrouter",
+    "free-ai",
+    "chat-completions",
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
@@ -11,6 +36,11 @@ dependencies = [
     "python-dotenv>=1.0",
     "pyyaml>=6.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/zoe27/free_ai"
+Repository = "https://github.com/zoe27/free_ai"
+Issues = "https://github.com/zoe27/free_ai/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
