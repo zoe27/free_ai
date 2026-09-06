@@ -1,8 +1,15 @@
 # free-ai-gateway
 
-自建的免费 AI API 聚合网关，暴露 OpenAI 兼容的 `/v1/chat/completions` 接口，后端按优先级自动 fallback 多个免费模型来源（Gemini、Groq、OpenRouter `:free` 模型、本地 Ollama 等）。
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 
-需求详情见 [docs/requirements.md](docs/requirements.md)，架构设计见 [docs/architecture.md](docs/architecture.md)，各来源 key 申请方式见 [docs/getting-keys.md](docs/getting-keys.md)。
+**OpenAI-compatible free LLM API gateway** with automatic provider fallback.
+
+Self-hosted gateway that exposes `/v1/chat/completions`. It routes to free / freemium model providers (Groq, Gemini, OpenRouter `:free`, Cerebras, local Ollama, and more) and fails over when a provider is rate-limited or down.
+
+自建的免费 AI API 聚合网关：OpenAI 兼容接口，按优先级自动 fallback 多个免费模型来源。
+
+需求详情见 [docs/requirements.md](docs/requirements.md)，架构设计见 [docs/architecture.md](docs/architecture.md)，各来源 key 申请方式见 [docs/getting-keys.md](docs/getting-keys.md)。贡献方式见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 快速开始
 
@@ -63,3 +70,7 @@ tests/
 - [ ] 流式响应（`stream=true`，目前会直接 400）
 - [ ] 单元测试
 - [ ] 部署方式：本地常驻 + 内网穿透，还是云端免费托管
+
+## License
+
+[MIT](LICENSE)
