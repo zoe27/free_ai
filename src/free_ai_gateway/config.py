@@ -47,10 +47,14 @@ def load_config(path: str | Path = "providers.yaml") -> GatewayConfig:
         api_key = os.environ.get(api_key_env) if api_key_env else None
         if api_key_env and not api_key:
             continue  # 没配 key，跳过，不进候选链
+        base_url = _resolve_env(spec["base_url"]).rstrip("/")
+        # 如 OLLAMA_BASE_URL 留空时，${OLLAMA_BASE_URL}/v1 会变成 "/v1"，视为未启用
+        if not base_url or base_url == "/v1":
+            continue
         rpm = spec.get("rpm")
         providers[name] = ProviderConfig(
             name=name,
-            base_url=_resolve_env(spec["base_url"]),
+            base_url=base_url,
             api_key=api_key,
             rpm=float(rpm) if rpm is not None else None,
         )
